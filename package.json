@@ -24,6 +24,11 @@
       "import": "./dist/sequencing/index.js",
       "require": "./dist/sequencing/index.cjs"
     },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js",
+      "require": "./dist/ui/index.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -50,16 +55,33 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint 'src/**/*.ts'",
     "test": "vitest",
+    "ladle": "ladle serve",
+    "ladle:build": "ladle build",
     "prepublishOnly": "npm run build"
   },
   "peerDependencies": {
-    "@elemaudio/core": "^4.0.0"
+    "@elemaudio/core": "^4.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@elemaudio/core": "^4.0.3",
     "@elemaudio/offline-renderer": "^4.0.3",
+    "@ladle/react": "^5.1.1",
     "@types/node": "^20.0.0",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
     "eslint": "^8.57.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "tsup": "^8.0.0",
     "typescript": "^5.3.0",
     "vitest": "^1.0.0"

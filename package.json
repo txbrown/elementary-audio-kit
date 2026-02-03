@@ -75,6 +75,7 @@
   "devDependencies": {
     "@elemaudio/core": "^4.0.3",
     "@elemaudio/offline-renderer": "^4.0.3",
+    "@elemaudio/web-renderer": "^4.0.3",
     "@ladle/react": "^5.1.1",
     "@types/node": "^20.0.0",
     "@types/react": "^19.2.10",

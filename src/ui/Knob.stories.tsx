@@ -399,7 +399,7 @@ export const ParameterBank: Story = () => {
   return (
     <div style={{ padding: 48, background: '#1a1a1a', minHeight: '100vh' }}>
       <div style={{ display: 'flex', gap: 24 }}>
-        {(Object.keys(params) as Array<keyof typeof params>).map((key, i) => (
+        {(Object.keys(params) as Array<keyof typeof params>).map((key) => (
           <div key={key} style={{ textAlign: 'center' }}>
             <Knob value={params[key]} onChange={update(key)}>
               {({ rotation, normalizedValue }) => (

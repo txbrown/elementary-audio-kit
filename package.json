@@ -1,0 +1,66 @@
+{
+  "name": "@elementary-audio-kit/core",
+  "version": "0.1.0",
+  "description": "Musical abstractions for Elementary Audio - timing, sequencing, and instruments",
+  "author": "Ricardo Abreu",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./timing": {
+      "types": "./dist/timing/index.d.ts",
+      "import": "./dist/timing/index.js",
+      "require": "./dist/timing/index.cjs"
+    },
+    "./sequencing": {
+      "types": "./dist/sequencing/index.d.ts",
+      "import": "./dist/sequencing/index.js",
+      "require": "./dist/sequencing/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "keywords": [
+    "audio",
+    "dsp",
+    "elementary",
+    "music",
+    "sequencer",
+    "synthesizer",
+    "timing",
+    "transport"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ricardoabreu/elementary-audio-kit.git"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint 'src/**/*.ts'",
+    "test": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "@elemaudio/core": "^4.0.0"
+  },
+  "devDependencies": {
+    "@elemaudio/core": "^4.0.3",
+    "@types/node": "^20.0.0",
+    "eslint": "^8.57.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

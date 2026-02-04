@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { el } from '@elemaudio/core';
 import type { Story } from '@ladle/react';
 
@@ -21,6 +21,94 @@ import { Knob } from '../ui/Knob';
 // Import timing and sequencing modules
 import { beatClock, subdivisionClock } from '../timing/clock';
 import { euclidean } from '../sequencing/euclidean';
+
+/**
+ * Reusable small knob component for stories
+ */
+const SmallKnob = ({
+  value,
+  onChange,
+  min,
+  max,
+  label,
+  step,
+  sensitivity,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  label: string;
+  step?: number;
+  sensitivity?: number;
+}) => (
+  <VStack gap={8} align="center">
+    <Knob value={value} onChange={onChange} min={min} max={max} step={step} sensitivity={sensitivity}>
+      {({ rotation: rot, normalizedValue }) => (
+        <div style={{ width: 44, height: 44, position: 'relative' }}>
+          <svg width={44} height={44}>
+            <circle cx={22} cy={22} r={18} fill="none" stroke={colors.border} strokeWidth={2} />
+            <circle
+              cx={22}
+              cy={22}
+              r={18}
+              fill="none"
+              stroke={colors.accentAlt}
+              strokeWidth={2}
+              strokeDasharray={`${normalizedValue * 113} 113`}
+              strokeLinecap="round"
+              transform="rotate(-90 22 22)"
+            />
+          </svg>
+          <div
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              width: 24,
+              height: 24,
+              borderRadius: '50%',
+              background: colors.surfaceAlt,
+              transform: `rotate(${rot}deg)`,
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 4,
+                left: 10,
+                width: 4,
+                height: 4,
+                borderRadius: 2,
+                background: '#fff',
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </Knob>
+    <div
+      style={{
+        fontFamily: fonts.mono,
+        fontSize: 9,
+        letterSpacing: '0.1em',
+        color: colors.textMuted,
+        textTransform: 'uppercase',
+      }}
+    >
+      {label}
+    </div>
+    <div
+      style={{
+        fontFamily: fonts.mono,
+        fontSize: 14,
+        color: colors.text,
+      }}
+    >
+      {step ? value : value.toFixed(0)}
+    </div>
+  </VStack>
+);
 
 /**
  * Simple metronome with BPM control
@@ -156,6 +244,91 @@ export const Metronome: Story = () => {
 };
 
 /**
+ * Debug story - minimal knob test
+ */
+export const DebugKnob: Story = () => {
+  const [value, setValue] = useState(5);
+
+  console.log('DebugKnob render, value:', value);
+
+  return (
+    <StoryContainer>
+      <VStack gap={32} align="center">
+        <Card>
+          <VStack gap={24} align="center">
+            <SectionTitle>Debug Knob</SectionTitle>
+
+            <Knob
+              value={value}
+              onChange={(v) => {
+                console.log('onChange called:', v);
+                setValue(v);
+              }}
+              min={1}
+              max={10}
+              step={1}
+              sensitivity={60}
+            >
+              {({ rotation, normalizedValue, isDragging }) => (
+                <div style={{ width: 64, height: 64, position: 'relative' }}>
+                  <svg width={64} height={64}>
+                    <circle cx={32} cy={32} r={28} fill="none" stroke={colors.border} strokeWidth={2} />
+                    <circle
+                      cx={32}
+                      cy={32}
+                      r={28}
+                      fill="none"
+                      stroke={isDragging ? colors.accent : colors.accentAlt}
+                      strokeWidth={2}
+                      strokeDasharray={`${normalizedValue * 175.9} 175.9`}
+                      strokeLinecap="round"
+                      transform="rotate(-90 32 32)"
+                    />
+                  </svg>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      left: 8,
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      background: colors.surfaceAlt,
+                      transform: `rotate(${rotation}deg)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 4,
+                        height: 4,
+                        borderRadius: 2,
+                        background: '#fff',
+                        marginTop: -20,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </Knob>
+
+            <div style={{ fontFamily: fonts.mono, fontSize: 24, color: colors.text }}>
+              {value}
+            </div>
+
+            <div style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted }}>
+              Drag up/down to change value (1-10)
+            </div>
+          </VStack>
+        </Card>
+      </VStack>
+    </StoryContainer>
+  );
+};
+
+/**
  * Euclidean rhythm generator with audio
  */
 export const EuclideanRhythm: Story = () => {
@@ -166,43 +339,38 @@ export const EuclideanRhythm: Story = () => {
   const [rotation, setRotation] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Generate pattern
-  const pattern = euclidean(hits, steps);
-  const rotatedPattern = [...pattern.slice(-rotation), ...pattern.slice(0, -rotation || pattern.length)];
+  // Clamp hits and rotation when steps changes
+  useEffect(() => {
+    if (hits > steps) setHits(steps);
+    if (rotation >= steps) setRotation(Math.max(0, steps - 1));
+  }, [steps, hits, rotation]);
+
+  // Generate pattern (memoized to prevent unnecessary re-renders)
+  const rotatedPattern = useMemo(() => {
+    const pattern = euclidean(hits, steps);
+    if (rotation === 0) return pattern;
+    return [...pattern.slice(-rotation), ...pattern.slice(0, -rotation)];
+  }, [hits, steps, rotation]);
 
   // Render the rhythm
   useEffect(() => {
     if (!state.isReady) return;
 
-    // Convert pattern to sequence values
     const seq = rotatedPattern.map((hit) => (hit ? 1 : 0));
-
-    // Clock at subdivision rate
-    const clock = subdivisionClock(bpm, steps / 4); // steps per beat
-
-    // Sequencer
-    const trigger = el.seq2(
-      { seq, hold: false, loop: true },
-      clock,
-      0
-    );
-
-    // Drum sound: noise burst with pitch envelope
+    const clock = subdivisionClock(bpm, steps / 4);
+    const trigger = el.seq2({ seq, hold: false, loop: true }, clock, 0);
     const env = el.adsr(0.001, 0.08, 0, 0.08, trigger);
     const noise = el.noise();
-    const filtered = el.lowpass(
-      el.add(200, el.mul(env, 2000)),
-      1,
-      noise
-    );
+    const filtered = el.lowpass(el.add(200, el.mul(env, 2000)), 1, noise);
     const sound = el.mul(filtered, env, 0.4);
-
     render(sound, sound);
   }, [state.isReady, bpm, rotatedPattern, steps, render]);
 
-  // Track current step for visualization
+  // Track current step for visualization (reset when pattern changes)
   useEffect(() => {
     if (!state.isReady) return;
+
+    setCurrentStep(0); // Reset on pattern/tempo change
 
     const interval = (60 / bpm / (steps / 4)) * 1000;
     const timer = setInterval(() => {
@@ -210,88 +378,7 @@ export const EuclideanRhythm: Story = () => {
     }, interval);
 
     return () => clearInterval(timer);
-  }, [state.isReady, bpm, steps]);
-
-  const SmallKnob = ({
-    value,
-    onChange,
-    min,
-    max,
-    label,
-  }: {
-    value: number;
-    onChange: (v: number) => void;
-    min: number;
-    max: number;
-    label: string;
-  }) => (
-    <VStack gap={8} align="center">
-      <Knob value={value} onChange={onChange} min={min} max={max}>
-        {({ rotation: rot, normalizedValue }) => (
-          <div style={{ width: 44, height: 44, position: 'relative' }}>
-            <svg width={44} height={44}>
-              <circle cx={22} cy={22} r={18} fill="none" stroke={colors.border} strokeWidth={2} />
-              <circle
-                cx={22}
-                cy={22}
-                r={18}
-                fill="none"
-                stroke={colors.accentAlt}
-                strokeWidth={2}
-                strokeDasharray={`${normalizedValue * 113} 113`}
-                strokeLinecap="round"
-                transform="rotate(-90 22 22)"
-              />
-            </svg>
-            <div
-              style={{
-                position: 'absolute',
-                top: 10,
-                left: 10,
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                background: colors.surfaceAlt,
-                transform: `rotate(${rot}deg)`,
-              }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 4,
-                  left: 10,
-                  width: 4,
-                  height: 4,
-                  borderRadius: 2,
-                  background: '#fff',
-                }}
-              />
-            </div>
-          </div>
-        )}
-      </Knob>
-      <div
-        style={{
-          fontFamily: fonts.mono,
-          fontSize: 9,
-          letterSpacing: '0.1em',
-          color: colors.textMuted,
-          textTransform: 'uppercase',
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontFamily: fonts.mono,
-          fontSize: 14,
-          color: colors.text,
-        }}
-      >
-        {Math.round(value)}
-      </div>
-    </VStack>
-  );
+  }, [state.isReady, bpm, steps, rotatedPattern]);
 
   return (
     <StoryContainer>
@@ -319,10 +406,10 @@ export const EuclideanRhythm: Story = () => {
               </div>
 
               <HStack gap={24}>
-                <SmallKnob value={hits} onChange={(v) => setHits(Math.round(v))} min={1} max={steps} label="Hits" />
-                <SmallKnob value={steps} onChange={(v) => setSteps(Math.round(v))} min={2} max={16} label="Steps" />
-                <SmallKnob value={rotation} onChange={(v) => setRotation(Math.round(v))} min={0} max={steps - 1} label="Rotate" />
-                <SmallKnob value={bpm} onChange={setBpm} min={40} max={200} label="BPM" />
+                <SmallKnob value={hits} onChange={setHits} min={1} max={steps} label="Hits" step={1} sensitivity={60} />
+                <SmallKnob value={steps} onChange={setSteps} min={2} max={16} label="Steps" step={1} sensitivity={80} />
+                <SmallKnob value={rotation} onChange={setRotation} min={0} max={Math.max(0, steps - 1)} label="Rotate" step={1} sensitivity={60} />
+                <SmallKnob value={bpm} onChange={setBpm} min={40} max={200} label="BPM" step={5} sensitivity={100} />
               </HStack>
             </VStack>
           </Card>

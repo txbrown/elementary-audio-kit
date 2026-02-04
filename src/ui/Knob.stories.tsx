@@ -111,7 +111,7 @@ export const OP1Style: Story = () => {
           padding: 24,
           borderRadius: 4,
           display: 'inline-block',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          border: `1px solid ${colors.border}`,
         }}
       >
         <Knob value={value} onChange={setValue}>

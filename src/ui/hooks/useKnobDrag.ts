@@ -1,7 +1,7 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 
 export interface KnobDragOptions {
-  /** Current value (0-1 normalized) */
+  /** Current value */
   value: number;
   /** Callback when value changes */
   onChange: (value: number) => void;
@@ -9,7 +9,9 @@ export interface KnobDragOptions {
   min?: number;
   /** Maximum value (default: 1) */
   max?: number;
-  /** Pixels of drag for full range (default: 200) */
+  /** Step size for snapping (default: 0 = continuous) */
+  step?: number;
+  /** Pixels of drag for full range (default: 150) */
   sensitivity?: number;
   /** Value curve: 'linear' | 'logarithmic' (default: 'linear') */
   curve?: 'linear' | 'logarithmic';
@@ -35,21 +37,6 @@ export interface KnobDragResult {
 
 /**
  * Hook for knob drag interaction.
- *
- * Provides pointer and keyboard handling for rotary knob controls.
- * Follows ARIA slider pattern for accessibility.
- *
- * @example
- * ```tsx
- * const { knobProps, isDragging } = useKnobDrag({
- *   value: volume,
- *   onChange: setVolume,
- *   min: 0,
- *   max: 1,
- * });
- *
- * return <div {...knobProps} className={isDragging ? 'active' : ''} />;
- * ```
  */
 export function useKnobDrag(options: KnobDragOptions): KnobDragResult {
   const {
@@ -57,127 +44,141 @@ export function useKnobDrag(options: KnobDragOptions): KnobDragResult {
     onChange,
     min = 0,
     max = 1,
-    sensitivity = 200,
+    step = 0,
+    sensitivity = 150,
     curve = 'linear',
     disabled = false,
   } = options;
 
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Use refs for values needed in event handlers to avoid stale closures
   const isDraggingRef = useRef(false);
   const startYRef = useRef(0);
   const startValueRef = useRef(0);
+  const onChangeRef = useRef(onChange);
+  const optionsRef = useRef({ min, max, step, sensitivity, curve });
 
-  // Convert between normalized (0-1) and actual value
-  const normalize = useCallback(
-    (val: number) => (val - min) / (max - min),
-    [min, max]
-  );
+  // Keep refs in sync
+  useEffect(() => {
+    onChangeRef.current = onChange;
+    optionsRef.current = { min, max, step, sensitivity, curve };
+  });
 
-  const denormalize = useCallback(
-    (normalized: number) => normalized * (max - min) + min,
-    [min, max]
-  );
+  const handlePointerMove = useCallback((e: PointerEvent) => {
+    if (!isDraggingRef.current) return;
 
-  // Apply curve transformation
-  const applyCurve = useCallback(
-    (normalized: number): number => {
-      if (curve === 'logarithmic') {
-        // Attempt logarithmic scaling for frequency-like values
-        return Math.pow(normalized, 2);
-      }
-      return normalized;
-    },
-    [curve]
-  );
+    const { min, max, step, sensitivity, curve } = optionsRef.current;
+    const deltaY = startYRef.current - e.clientY;
+    const deltaNormalized = deltaY / sensitivity;
 
-  const applyInverseCurve = useCallback(
-    (normalized: number): number => {
-      if (curve === 'logarithmic') {
-        return Math.sqrt(Math.max(0, normalized));
-      }
-      return normalized;
-    },
-    [curve]
-  );
+    let newNormalized = Math.max(0, Math.min(1, startValueRef.current + deltaNormalized));
+
+    // Apply curve
+    if (curve === 'logarithmic') {
+      newNormalized = Math.pow(newNormalized, 2);
+    }
+
+    // Denormalize
+    let newValue = newNormalized * (max - min) + min;
+
+    // Snap to step
+    if (step > 0) {
+      newValue = Math.round((newValue - min) / step) * step + min;
+      newValue = Math.max(min, Math.min(max, newValue));
+    }
+
+    onChangeRef.current(newValue);
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', handlePointerUp);
+  }, [handlePointerMove]);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (disabled) return;
 
       e.preventDefault();
+
+      const { min, max, curve } = optionsRef.current;
+
+      // Normalize current value
+      let normalizedValue = (value - min) / (max - min);
+
+      // Apply inverse curve for starting position
+      if (curve === 'logarithmic') {
+        normalizedValue = Math.sqrt(Math.max(0, normalizedValue));
+      }
+
       isDraggingRef.current = true;
       startYRef.current = e.clientY;
-      startValueRef.current = applyInverseCurve(normalize(value));
+      startValueRef.current = normalizedValue;
 
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      setIsDragging(true);
+
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
     },
-    [disabled, value, normalize, applyInverseCurve]
+    [disabled, value, handlePointerMove, handlePointerUp]
   );
-
-  const handlePointerMove = useCallback(
-    (e: PointerEvent) => {
-      if (!isDraggingRef.current) return;
-
-      const deltaY = startYRef.current - e.clientY;
-      const deltaNormalized = deltaY / sensitivity;
-      const newNormalized = Math.max(
-        0,
-        Math.min(1, startValueRef.current + deltaNormalized)
-      );
-
-      const newValue = denormalize(applyCurve(newNormalized));
-      onChange(newValue);
-    },
-    [sensitivity, denormalize, applyCurve, onChange]
-  );
-
-  const handlePointerUp = useCallback(() => {
-    isDraggingRef.current = false;
-  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (disabled) return;
 
-      const step = (max - min) / 100;
-      const largeStep = (max - min) / 10;
+      const keyStep = step > 0 ? step : (max - min) / 100;
+      const largeStep = step > 0 ? step * 10 : (max - min) / 10;
+
+      let newValue = value;
 
       switch (e.key) {
         case 'ArrowUp':
         case 'ArrowRight':
           e.preventDefault();
-          onChange(Math.min(max, value + step));
+          newValue = Math.min(max, value + keyStep);
           break;
         case 'ArrowDown':
         case 'ArrowLeft':
           e.preventDefault();
-          onChange(Math.max(min, value - step));
+          newValue = Math.max(min, value - keyStep);
           break;
         case 'PageUp':
           e.preventDefault();
-          onChange(Math.min(max, value + largeStep));
+          newValue = Math.min(max, value + largeStep);
           break;
         case 'PageDown':
           e.preventDefault();
-          onChange(Math.max(min, value - largeStep));
+          newValue = Math.max(min, value - largeStep);
           break;
         case 'Home':
           e.preventDefault();
-          onChange(min);
+          newValue = min;
           break;
         case 'End':
           e.preventDefault();
-          onChange(max);
+          newValue = max;
           break;
+        default:
+          return;
       }
+
+      // Snap to step
+      if (step > 0) {
+        newValue = Math.round((newValue - min) / step) * step + min;
+        newValue = Math.max(min, Math.min(max, newValue));
+      }
+
+      onChange(newValue);
     },
-    [disabled, value, onChange, min, max]
+    [disabled, value, onChange, min, max, step]
   );
 
-  // Global event listeners for drag
+  // Cleanup on unmount
   useEffect(() => {
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
-
     return () => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
@@ -195,6 +196,6 @@ export function useKnobDrag(options: KnobDragOptions): KnobDragResult {
       'aria-valuemax': max,
       'aria-disabled': disabled || undefined,
     },
-    isDragging: isDraggingRef.current,
+    isDragging,
   };
 }

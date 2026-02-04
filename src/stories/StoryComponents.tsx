@@ -169,8 +169,7 @@ export function BeatLight({
         borderRadius: '50%',
         background: active ? color : colors.surfaceAlt,
         border: `1px solid ${active ? color : colors.border}`,
-        boxShadow: active ? `0 0 ${size}px ${color}` : 'none',
-        transition: 'all 0.05s',
+        transition: 'background 0.05s, border-color 0.05s',
       }}
     />
   );

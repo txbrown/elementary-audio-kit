@@ -4,7 +4,6 @@ import type { Story } from '@ladle/react';
 import { Knob } from '../ui/Knob';
 import {
   StoryContainer,
-  StartButton,
   SectionTitle,
   Card,
   HStack,
@@ -227,6 +226,18 @@ export const Transport: Story = () => {
 
   const timeSignature = TimeSignatures[timeSigKey];
 
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
+
   useEffect(() => {
     if (!state.isReady) return;
 
@@ -281,19 +292,17 @@ export const Transport: Story = () => {
 
   return (
     <StoryContainer>
-      <StartButton onClick={start} isReady={state.isReady} />
-      {state.isReady && (
-        <VStack gap={32}>
-          <SectionTitle>Transport</SectionTitle>
+      <VStack gap={32}>
+        <SectionTitle>Transport</SectionTitle>
 
-          <Card>
-            <VStack gap={24}>
-              {/* Controls row */}
-              <HStack gap={24} align="flex-end">
-                <PlayButton
-                  isPlaying={isPlaying}
-                  onClick={() => setIsPlaying(!isPlaying)}
-                />
+        <Card>
+          <VStack gap={24}>
+            {/* Controls row */}
+            <HStack gap={24} align="flex-end">
+              <PlayButton
+                isPlaying={isPlaying}
+                onClick={handlePlayToggle}
+              />
                 <SmallKnob
                   value={bpm}
                   onChange={setBpm}
@@ -386,7 +395,6 @@ export const Transport: Story = () => {
             <span style={{ color: colors.text }}>barPhase</span> - 0-1 ramp over each bar
           </div>
         </VStack>
-      )}
     </StoryContainer>
   );
 };
@@ -398,6 +406,18 @@ export const Subdivisions: Story = () => {
   const { state, start, render } = useAudioContext();
   const [bpm, setBpm] = useState(80);
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
   const [quarterBeat, setQuarterBeat] = useState(false);
   const [eighthBeat, setEighthBeat] = useState(false);
   const [sixteenthBeat, setSixteenthBeat] = useState(false);
@@ -464,18 +484,16 @@ export const Subdivisions: Story = () => {
 
   return (
     <StoryContainer>
-      <StartButton onClick={start} isReady={state.isReady} />
-      {state.isReady && (
-        <VStack gap={32}>
-          <SectionTitle>Subdivision Clocks</SectionTitle>
+      <VStack gap={32}>
+        <SectionTitle>Subdivision Clocks</SectionTitle>
 
-          <Card>
-            <VStack gap={24}>
-              <HStack gap={24} align="flex-end">
-                <PlayButton
-                  isPlaying={isPlaying}
-                  onClick={() => setIsPlaying(!isPlaying)}
-                />
+        <Card>
+          <VStack gap={24}>
+            <HStack gap={24} align="flex-end">
+              <PlayButton
+                isPlaying={isPlaying}
+                onClick={handlePlayToggle}
+              />
                 <SmallKnob
                   value={bpm}
                   onChange={setBpm}
@@ -567,7 +585,6 @@ export const Subdivisions: Story = () => {
             </VStack>
           </Card>
         </VStack>
-      )}
     </StoryContainer>
   );
 };
@@ -583,6 +600,18 @@ export const GroovePatternsDemo: Story = () => {
   const [currentStep, setCurrentStep] = useState(0);
 
   const pattern = GroovePatterns[patternKey];
+
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
 
   useEffect(() => {
     if (!state.isReady) return;
@@ -628,18 +657,16 @@ export const GroovePatternsDemo: Story = () => {
 
   return (
     <StoryContainer>
-      <StartButton onClick={start} isReady={state.isReady} />
-      {state.isReady && (
-        <VStack gap={32}>
-          <SectionTitle>Groove Patterns</SectionTitle>
+      <VStack gap={32}>
+        <SectionTitle>Groove Patterns</SectionTitle>
 
-          <Card>
-            <VStack gap={24}>
-              <HStack gap={24} align="flex-end">
-                <PlayButton
-                  isPlaying={isPlaying}
-                  onClick={() => setIsPlaying(!isPlaying)}
-                />
+        <Card>
+          <VStack gap={24}>
+            <HStack gap={24} align="flex-end">
+              <PlayButton
+                isPlaying={isPlaying}
+                onClick={handlePlayToggle}
+              />
                 <SmallKnob
                   value={bpm}
                   onChange={setBpm}
@@ -750,7 +777,6 @@ export const GroovePatternsDemo: Story = () => {
             Use <span style={{ color: colors.text }}>accentPattern(clock, velocities)</span> to apply them.
           </div>
         </VStack>
-      )}
     </StoryContainer>
   );
 };

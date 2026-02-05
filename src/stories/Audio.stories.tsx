@@ -5,7 +5,6 @@ import type { Story } from '@ladle/react';
 import { useAudioContext } from './useAudioContext';
 import {
   StoryContainer,
-  StartButton,
   SectionTitle,
   ParamDisplay,
   BeatRow,
@@ -117,10 +116,29 @@ export const Metronome: Story = () => {
   const { state, start, render } = useAudioContext();
   const [bpm, setBpm] = useState(120);
   const [beatCount, setBeatCount] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
 
   // Render the metronome sound
   useEffect(() => {
     if (!state.isReady) return;
+
+    if (!isPlaying) {
+      // Render silence when not playing
+      render(el.const({ value: 0 }), el.const({ value: 0 }));
+      return;
+    }
 
     // Create click sound: short sine burst on each beat
     const clock = beatClock(bpm);
@@ -136,11 +154,14 @@ export const Metronome: Story = () => {
     );
 
     render(clickOsc, clickOsc);
-  }, [state.isReady, bpm, render]);
+  }, [state.isReady, bpm, isPlaying, render]);
 
   // Simulate beat counter for visualization
   useEffect(() => {
-    if (!state.isReady) return;
+    if (!state.isReady || !isPlaying) {
+      setBeatCount(0);
+      return;
+    }
 
     const interval = (60 / bpm) * 1000;
     const timer = setInterval(() => {
@@ -148,19 +169,47 @@ export const Metronome: Story = () => {
     }, interval);
 
     return () => clearInterval(timer);
-  }, [state.isReady, bpm]);
+  }, [state.isReady, bpm, isPlaying]);
 
   return (
     <StoryContainer>
       <VStack gap={32} align="center">
-        <StartButton onClick={start} isReady={state.isReady} />
+        <Card>
+          <VStack gap={24} align="center">
+            <SectionTitle>Metronome</SectionTitle>
 
-        {state.isReady && (
-          <Card>
-            <VStack gap={24} align="center">
-              <SectionTitle>Metronome</SectionTitle>
+            <BeatRow count={4} active={beatCount} />
 
-              <BeatRow count={4} active={beatCount} />
+            {/* Play button */}
+            <button
+              onClick={handlePlayToggle}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 4,
+                border: 'none',
+                background: isPlaying ? colors.accent : colors.accentAlt,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isPlaying ? (
+                <div style={{ width: 18, height: 18, background: '#fff', borderRadius: 2 }} />
+              ) : (
+                <div
+                  style={{
+                    width: 0,
+                    height: 0,
+                    marginLeft: 4,
+                    borderTop: '12px solid transparent',
+                    borderBottom: '12px solid transparent',
+                    borderLeft: '20px solid #fff',
+                  }}
+                />
+              )}
+            </button>
 
               <HStack gap={32}>
                 <VStack gap={8} align="center">
@@ -237,7 +286,6 @@ export const Metronome: Story = () => {
               </HStack>
             </VStack>
           </Card>
-        )}
       </VStack>
     </StoryContainer>
   );
@@ -338,6 +386,19 @@ export const EuclideanRhythm: Story = () => {
   const [steps, setSteps] = useState(8);
   const [rotation, setRotation] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
 
   // Clamp hits and rotation when steps changes
   useEffect(() => {
@@ -356,6 +417,11 @@ export const EuclideanRhythm: Story = () => {
   useEffect(() => {
     if (!state.isReady) return;
 
+    if (!isPlaying) {
+      render(el.const({ value: 0 }), el.const({ value: 0 }));
+      return;
+    }
+
     const seq = rotatedPattern.map((hit) => (hit ? 1 : 0));
     const clock = subdivisionClock(bpm, steps / 4);
     const trigger = el.seq2({ seq, hold: false, loop: true }, clock, 0);
@@ -364,13 +430,14 @@ export const EuclideanRhythm: Story = () => {
     const filtered = el.lowpass(el.add(200, el.mul(env, 2000)), 1, noise);
     const sound = el.mul(filtered, env, 0.4);
     render(sound, sound);
-  }, [state.isReady, bpm, rotatedPattern, steps, render]);
+  }, [state.isReady, bpm, rotatedPattern, steps, isPlaying, render]);
 
   // Track current step for visualization (reset when pattern changes)
   useEffect(() => {
-    if (!state.isReady) return;
-
-    setCurrentStep(0); // Reset on pattern/tempo change
+    if (!state.isReady || !isPlaying) {
+      setCurrentStep(0);
+      return;
+    }
 
     const interval = (60 / bpm / (steps / 4)) * 1000;
     const timer = setInterval(() => {
@@ -378,42 +445,69 @@ export const EuclideanRhythm: Story = () => {
     }, interval);
 
     return () => clearInterval(timer);
-  }, [state.isReady, bpm, steps, rotatedPattern]);
+  }, [state.isReady, bpm, steps, rotatedPattern, isPlaying]);
 
   return (
     <StoryContainer>
       <VStack gap={32} align="center">
-        <StartButton onClick={start} isReady={state.isReady} />
+        <Card style={{ minWidth: 400 }}>
+          <VStack gap={24} align="center">
+            <SectionTitle>Euclidean Rhythm</SectionTitle>
 
-        {state.isReady && (
-          <Card style={{ minWidth: 400 }}>
-            <VStack gap={24} align="center">
-              <SectionTitle>Euclidean Rhythm</SectionTitle>
+            <StepGrid
+              pattern={rotatedPattern}
+              currentStep={currentStep}
+            />
 
-              <StepGrid
-                pattern={rotatedPattern}
-                currentStep={currentStep}
-              />
+            <div
+              style={{
+                fontFamily: fonts.mono,
+                fontSize: 12,
+                color: colors.textMuted,
+              }}
+            >
+              E({hits}, {steps}){rotation !== 0 && ` +${rotation}`}
+            </div>
 
-              <div
-                style={{
-                  fontFamily: fonts.mono,
-                  fontSize: 12,
-                  color: colors.textMuted,
-                }}
-              >
-                E({hits}, {steps}){rotation !== 0 && ` +${rotation}`}
-              </div>
+            {/* Play button */}
+            <button
+              onClick={handlePlayToggle}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 4,
+                border: 'none',
+                background: isPlaying ? colors.accent : colors.accentAlt,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isPlaying ? (
+                <div style={{ width: 18, height: 18, background: '#fff', borderRadius: 2 }} />
+              ) : (
+                <div
+                  style={{
+                    width: 0,
+                    height: 0,
+                    marginLeft: 4,
+                    borderTop: '12px solid transparent',
+                    borderBottom: '12px solid transparent',
+                    borderLeft: '20px solid #fff',
+                  }}
+                />
+              )}
+            </button>
 
-              <HStack gap={24}>
-                <SmallKnob value={hits} onChange={setHits} min={1} max={steps} label="Hits" step={1} sensitivity={60} />
-                <SmallKnob value={steps} onChange={setSteps} min={2} max={16} label="Steps" step={1} sensitivity={80} />
-                <SmallKnob value={rotation} onChange={setRotation} min={0} max={Math.max(0, steps - 1)} label="Rotate" step={1} sensitivity={60} />
-                <SmallKnob value={bpm} onChange={setBpm} min={40} max={200} label="BPM" step={5} sensitivity={100} />
-              </HStack>
-            </VStack>
-          </Card>
-        )}
+            <HStack gap={24}>
+              <SmallKnob value={hits} onChange={setHits} min={1} max={steps} label="Hits" step={1} sensitivity={60} />
+              <SmallKnob value={steps} onChange={setSteps} min={2} max={16} label="Steps" step={1} sensitivity={80} />
+              <SmallKnob value={rotation} onChange={setRotation} min={0} max={Math.max(0, steps - 1)} label="Rotate" step={1} sensitivity={60} />
+              <SmallKnob value={bpm} onChange={setBpm} min={40} max={200} label="BPM" step={5} sensitivity={100} />
+            </HStack>
+          </VStack>
+        </Card>
       </VStack>
     </StoryContainer>
   );
@@ -431,10 +525,28 @@ export const Polyrhythm: Story = () => {
     { hits: 7, steps: 12, pitch: 440 },
   ]);
   const [currentSteps, setCurrentSteps] = useState([0, 0, 0]);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
 
   // Render polyrhythm
   useEffect(() => {
     if (!state.isReady) return;
+
+    if (!isPlaying) {
+      render(el.const({ value: 0 }), el.const({ value: 0 }));
+      return;
+    }
 
     const voices = patterns.map((p) => {
       const pattern = euclidean(p.hits, p.steps);
@@ -448,11 +560,14 @@ export const Polyrhythm: Story = () => {
 
     const mixed = voices.reduce((acc, v) => el.add(acc, v), el.const({ value: 0 }));
     render(mixed, mixed);
-  }, [state.isReady, bpm, patterns, render]);
+  }, [state.isReady, bpm, patterns, isPlaying, render]);
 
   // Track current steps
   useEffect(() => {
-    if (!state.isReady) return;
+    if (!state.isReady || !isPlaying) {
+      setCurrentSteps([0, 0, 0]);
+      return;
+    }
 
     const timers = patterns.map((p, i) => {
       const interval = (60 / bpm / (p.steps / 4)) * 1000;
@@ -466,110 +581,137 @@ export const Polyrhythm: Story = () => {
     });
 
     return () => timers.forEach(clearInterval);
-  }, [state.isReady, bpm, patterns]);
+  }, [state.isReady, bpm, patterns, isPlaying]);
 
   const colors_voices = [colors.accent, colors.accentAlt, colors.accentBlue];
 
   return (
     <StoryContainer>
       <VStack gap={32} align="center">
-        <StartButton onClick={start} isReady={state.isReady} />
+        <Card style={{ minWidth: 500 }}>
+          <VStack gap={24}>
+            <HStack style={{ justifyContent: 'space-between' }}>
+              <SectionTitle>Polyrhythm</SectionTitle>
+              <ParamDisplay label="BPM" value={bpm.toFixed(0)} />
+            </HStack>
 
-        {state.isReady && (
-          <Card style={{ minWidth: 500 }}>
-            <VStack gap={24}>
-              <HStack style={{ justifyContent: 'space-between' }}>
-                <SectionTitle>Polyrhythm</SectionTitle>
-                <ParamDisplay label="BPM" value={bpm.toFixed(0)} />
-              </HStack>
-
-              {patterns.map((p, i) => (
-                <HStack key={i} gap={16} align="center">
-                  <div
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      background: colors_voices[i],
-                    }}
-                  />
-                  <StepGrid
-                    pattern={euclidean(p.hits, p.steps)}
-                    currentStep={currentSteps[i]}
-                  />
-                  <div
-                    style={{
-                      fontFamily: fonts.mono,
-                      fontSize: 11,
-                      color: colors.textMuted,
-                      minWidth: 60,
-                    }}
-                  >
-                    E({p.hits},{p.steps})
-                  </div>
-                </HStack>
-              ))}
-
-              <HStack gap={16} style={{ marginTop: 8 }}>
-                <Knob value={bpm} onChange={setBpm} min={40} max={180}>
-                  {({ rotation: rot, normalizedValue }) => (
-                    <div style={{ width: 48, height: 48, position: 'relative' }}>
-                      <svg width={48} height={48}>
-                        <circle cx={24} cy={24} r={20} fill="none" stroke={colors.border} strokeWidth={2} />
-                        <circle
-                          cx={24}
-                          cy={24}
-                          r={20}
-                          fill="none"
-                          stroke={colors.accent}
-                          strokeWidth={2}
-                          strokeDasharray={`${normalizedValue * 125.6} 125.6`}
-                          strokeLinecap="round"
-                          transform="rotate(-90 24 24)"
-                        />
-                      </svg>
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: 10,
-                          left: 10,
-                          width: 28,
-                          height: 28,
-                          borderRadius: '50%',
-                          background: colors.surfaceAlt,
-                          transform: `rotate(${rot}deg)`,
-                        }}
-                      >
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: 4,
-                            left: 12,
-                            width: 4,
-                            height: 4,
-                            borderRadius: 2,
-                            background: '#fff',
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </Knob>
+            {patterns.map((p, i) => (
+              <HStack key={i} gap={16} align="center">
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    background: colors_voices[i],
+                  }}
+                />
+                <StepGrid
+                  pattern={euclidean(p.hits, p.steps)}
+                  currentStep={currentSteps[i]}
+                />
                 <div
                   style={{
                     fontFamily: fonts.mono,
-                    fontSize: 9,
+                    fontSize: 11,
                     color: colors.textMuted,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
+                    minWidth: 60,
                   }}
                 >
-                  Tempo
+                  E({p.hits},{p.steps})
                 </div>
               </HStack>
-            </VStack>
-          </Card>
-        )}
+            ))}
+
+            {/* Play button */}
+            <button
+              onClick={handlePlayToggle}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 4,
+                border: 'none',
+                background: isPlaying ? colors.accent : colors.accentAlt,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isPlaying ? (
+                <div style={{ width: 18, height: 18, background: '#fff', borderRadius: 2 }} />
+              ) : (
+                <div
+                  style={{
+                    width: 0,
+                    height: 0,
+                    marginLeft: 4,
+                    borderTop: '12px solid transparent',
+                    borderBottom: '12px solid transparent',
+                    borderLeft: '20px solid #fff',
+                  }}
+                />
+              )}
+            </button>
+
+            <HStack gap={16} style={{ marginTop: 8 }}>
+              <Knob value={bpm} onChange={setBpm} min={40} max={180}>
+                {({ rotation: rot, normalizedValue }) => (
+                  <div style={{ width: 48, height: 48, position: 'relative' }}>
+                    <svg width={48} height={48}>
+                      <circle cx={24} cy={24} r={20} fill="none" stroke={colors.border} strokeWidth={2} />
+                      <circle
+                        cx={24}
+                        cy={24}
+                        r={20}
+                        fill="none"
+                        stroke={colors.accent}
+                        strokeWidth={2}
+                        strokeDasharray={`${normalizedValue * 125.6} 125.6`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 24 24)"
+                      />
+                    </svg>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 10,
+                        left: 10,
+                        width: 28,
+                        height: 28,
+                        borderRadius: '50%',
+                        background: colors.surfaceAlt,
+                        transform: `rotate(${rot}deg)`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 4,
+                          left: 12,
+                          width: 4,
+                          height: 4,
+                          borderRadius: 2,
+                          background: '#fff',
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </Knob>
+              <div
+                style={{
+                  fontFamily: fonts.mono,
+                  fontSize: 9,
+                  color: colors.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                }}
+              >
+                Tempo
+              </div>
+            </HStack>
+          </VStack>
+        </Card>
       </VStack>
     </StoryContainer>
   );
@@ -583,9 +725,27 @@ export const Oscillator: Story = () => {
   const [freq, setFreq] = useState(440);
   const [gain, setGain] = useState(0.3);
   const [waveform, setWaveform] = useState<'sine' | 'saw' | 'square' | 'triangle'>('sine');
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
 
   useEffect(() => {
     if (!state.isReady) return;
+
+    if (!isPlaying) {
+      render(el.const({ value: 0 }), el.const({ value: 0 }));
+      return;
+    }
 
     let osc;
     switch (waveform) {
@@ -605,7 +765,7 @@ export const Oscillator: Story = () => {
 
     const out = el.mul(osc, gain);
     render(out, out);
-  }, [state.isReady, freq, gain, waveform, render]);
+  }, [state.isReady, freq, gain, waveform, isPlaying, render]);
 
   const formatFreq = (f: number) => {
     if (f >= 1000) return `${(f / 1000).toFixed(2)}k`;
@@ -615,169 +775,196 @@ export const Oscillator: Story = () => {
   return (
     <StoryContainer>
       <VStack gap={32} align="center">
-        <StartButton onClick={start} isReady={state.isReady} />
+        <Card>
+          <VStack gap={24} align="center">
+            <SectionTitle>Oscillator</SectionTitle>
 
-        {state.isReady && (
-          <Card>
-            <VStack gap={24} align="center">
-              <SectionTitle>Oscillator</SectionTitle>
+            {/* Play button */}
+            <button
+              onClick={handlePlayToggle}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 4,
+                border: 'none',
+                background: isPlaying ? colors.accent : colors.accentAlt,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {isPlaying ? (
+                <div style={{ width: 18, height: 18, background: '#fff', borderRadius: 2 }} />
+              ) : (
+                <div
+                  style={{
+                    width: 0,
+                    height: 0,
+                    marginLeft: 4,
+                    borderTop: '12px solid transparent',
+                    borderBottom: '12px solid transparent',
+                    borderLeft: '20px solid #fff',
+                  }}
+                />
+              )}
+            </button>
 
-              <HStack gap={32}>
-                <VStack gap={8} align="center">
-                  <Knob
-                    value={freq}
-                    onChange={setFreq}
-                    min={20}
-                    max={2000}
-                    curve="logarithmic"
-                  >
-                    {({ rotation, normalizedValue }) => (
-                      <div style={{ width: 72, height: 72, position: 'relative' }}>
-                        <svg width={72} height={72}>
-                          <circle cx={36} cy={36} r={32} fill="none" stroke={colors.border} strokeWidth={3} />
-                          <circle
-                            cx={36}
-                            cy={36}
-                            r={32}
-                            fill="none"
-                            stroke={colors.accent}
-                            strokeWidth={3}
-                            strokeDasharray={`${normalizedValue * 201} 201`}
-                            strokeLinecap="round"
-                            transform="rotate(-90 36 36)"
-                          />
-                        </svg>
+            <HStack gap={32}>
+              <VStack gap={8} align="center">
+                <Knob
+                  value={freq}
+                  onChange={setFreq}
+                  min={20}
+                  max={2000}
+                  curve="logarithmic"
+                >
+                  {({ rotation, normalizedValue }) => (
+                    <div style={{ width: 72, height: 72, position: 'relative' }}>
+                      <svg width={72} height={72}>
+                        <circle cx={36} cy={36} r={32} fill="none" stroke={colors.border} strokeWidth={3} />
+                        <circle
+                          cx={36}
+                          cy={36}
+                          r={32}
+                          fill="none"
+                          stroke={colors.accent}
+                          strokeWidth={3}
+                          strokeDasharray={`${normalizedValue * 201} 201`}
+                          strokeLinecap="round"
+                          transform="rotate(-90 36 36)"
+                        />
+                      </svg>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 12,
+                          left: 12,
+                          width: 48,
+                          height: 48,
+                          borderRadius: '50%',
+                          background: colors.surfaceAlt,
+                          transform: `rotate(${rotation}deg)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: 3,
+                            background: colors.accent,
+                            marginTop: -20,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </Knob>
+                <div style={{ fontFamily: fonts.mono, fontSize: 14, color: colors.text }}>
+                  {formatFreq(freq)} <span style={{ fontSize: 10, color: colors.textMuted }}>Hz</span>
+                </div>
+                <div
+                  style={{
+                    fontFamily: fonts.mono,
+                    fontSize: 9,
+                    color: colors.textMuted,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                  }}
+                >
+                  Frequency
+                </div>
+              </VStack>
+
+              <VStack gap={8} align="center">
+                <Knob value={gain} onChange={setGain} min={0} max={1}>
+                  {({ rotation, normalizedValue }) => (
+                    <div style={{ width: 48, height: 48, position: 'relative' }}>
+                      <svg width={48} height={48}>
+                        <circle cx={24} cy={24} r={20} fill="none" stroke={colors.border} strokeWidth={2} />
+                        <circle
+                          cx={24}
+                          cy={24}
+                          r={20}
+                          fill="none"
+                          stroke={colors.accentAlt}
+                          strokeWidth={2}
+                          strokeDasharray={`${normalizedValue * 125.6} 125.6`}
+                          strokeLinecap="round"
+                          transform="rotate(-90 24 24)"
+                        />
+                      </svg>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 10,
+                          left: 10,
+                          width: 28,
+                          height: 28,
+                          borderRadius: '50%',
+                          background: colors.surfaceAlt,
+                          transform: `rotate(${rotation}deg)`,
+                        }}
+                      >
                         <div
                           style={{
                             position: 'absolute',
-                            top: 12,
+                            top: 4,
                             left: 12,
-                            width: 48,
-                            height: 48,
-                            borderRadius: '50%',
-                            background: colors.surfaceAlt,
-                            transform: `rotate(${rotation}deg)`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                            width: 4,
+                            height: 4,
+                            borderRadius: 2,
+                            background: '#fff',
                           }}
-                        >
-                          <div
-                            style={{
-                              width: 6,
-                              height: 6,
-                              borderRadius: 3,
-                              background: colors.accent,
-                              marginTop: -20,
-                            }}
-                          />
-                        </div>
+                        />
                       </div>
-                    )}
-                  </Knob>
-                  <div style={{ fontFamily: fonts.mono, fontSize: 14, color: colors.text }}>
-                    {formatFreq(freq)} <span style={{ fontSize: 10, color: colors.textMuted }}>Hz</span>
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: fonts.mono,
-                      fontSize: 9,
-                      color: colors.textMuted,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                    }}
-                  >
-                    Frequency
-                  </div>
-                </VStack>
+                    </div>
+                  )}
+                </Knob>
+                <div style={{ fontFamily: fonts.mono, fontSize: 12, color: colors.text }}>
+                  {(gain * 100).toFixed(0)}%
+                </div>
+                <div
+                  style={{
+                    fontFamily: fonts.mono,
+                    fontSize: 9,
+                    color: colors.textMuted,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                  }}
+                >
+                  Gain
+                </div>
+              </VStack>
+            </HStack>
 
-                <VStack gap={8} align="center">
-                  <Knob value={gain} onChange={setGain} min={0} max={1}>
-                    {({ rotation, normalizedValue }) => (
-                      <div style={{ width: 48, height: 48, position: 'relative' }}>
-                        <svg width={48} height={48}>
-                          <circle cx={24} cy={24} r={20} fill="none" stroke={colors.border} strokeWidth={2} />
-                          <circle
-                            cx={24}
-                            cy={24}
-                            r={20}
-                            fill="none"
-                            stroke={colors.accentAlt}
-                            strokeWidth={2}
-                            strokeDasharray={`${normalizedValue * 125.6} 125.6`}
-                            strokeLinecap="round"
-                            transform="rotate(-90 24 24)"
-                          />
-                        </svg>
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: 10,
-                            left: 10,
-                            width: 28,
-                            height: 28,
-                            borderRadius: '50%',
-                            background: colors.surfaceAlt,
-                            transform: `rotate(${rotation}deg)`,
-                          }}
-                        >
-                          <div
-                            style={{
-                              position: 'absolute',
-                              top: 4,
-                              left: 12,
-                              width: 4,
-                              height: 4,
-                              borderRadius: 2,
-                              background: '#fff',
-                            }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </Knob>
-                  <div style={{ fontFamily: fonts.mono, fontSize: 12, color: colors.text }}>
-                    {(gain * 100).toFixed(0)}%
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: fonts.mono,
-                      fontSize: 9,
-                      color: colors.textMuted,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                    }}
-                  >
-                    Gain
-                  </div>
-                </VStack>
-              </HStack>
-
-              <HStack gap={8}>
-                {(['sine', 'saw', 'square', 'triangle'] as const).map((w) => (
-                  <button
-                    key={w}
-                    onClick={() => setWaveform(w)}
-                    style={{
-                      padding: '8px 12px',
-                      fontFamily: fonts.mono,
-                      fontSize: 10,
-                      letterSpacing: '0.05em',
-                      textTransform: 'uppercase',
-                      background: waveform === w ? colors.accent : colors.surfaceAlt,
-                      color: waveform === w ? '#fff' : colors.textMuted,
-                      border: `1px solid ${waveform === w ? colors.accent : colors.border}`,
-                      borderRadius: 2,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {w}
-                  </button>
-                ))}
-              </HStack>
-            </VStack>
-          </Card>
-        )}
+            <HStack gap={8}>
+              {(['sine', 'saw', 'square', 'triangle'] as const).map((w) => (
+                <button
+                  key={w}
+                  onClick={() => setWaveform(w)}
+                  style={{
+                    padding: '8px 12px',
+                    fontFamily: fonts.mono,
+                    fontSize: 10,
+                    letterSpacing: '0.05em',
+                    textTransform: 'uppercase',
+                    background: waveform === w ? colors.accent : colors.surfaceAlt,
+                    color: waveform === w ? '#fff' : colors.textMuted,
+                    border: `1px solid ${waveform === w ? colors.accent : colors.border}`,
+                    borderRadius: 2,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {w}
+                </button>
+              ))}
+            </HStack>
+          </VStack>
+        </Card>
       </VStack>
     </StoryContainer>
   );

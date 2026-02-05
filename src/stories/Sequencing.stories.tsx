@@ -4,7 +4,6 @@ import type { Story } from '@ladle/react';
 import { Knob } from '../ui/Knob';
 import {
   StoryContainer,
-  StartButton,
   SectionTitle,
   Card,
   HStack,
@@ -210,6 +209,18 @@ export const EuclideanPresetsDemo: Story = () => {
     [preset.hits, preset.steps, rotation]
   );
 
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
+
   useEffect(() => {
     if (!state.isReady) return;
 
@@ -257,15 +268,13 @@ export const EuclideanPresetsDemo: Story = () => {
 
   return (
     <StoryContainer>
-      <StartButton onClick={start} isReady={state.isReady} />
-      {state.isReady && (
-        <VStack gap={32}>
-          <SectionTitle>Euclidean Presets</SectionTitle>
+      <VStack gap={32}>
+        <SectionTitle>Euclidean Presets</SectionTitle>
 
-          <Card>
-            <VStack gap={24}>
-              <HStack gap={24} align="flex-end">
-                <PlayButton isPlaying={isPlaying} onClick={() => setIsPlaying(!isPlaying)} />
+        <Card>
+          <VStack gap={24}>
+            <HStack gap={24} align="flex-end">
+              <PlayButton isPlaying={isPlaying} onClick={handlePlayToggle} />
                 <SmallKnob
                   value={bpm}
                   onChange={setBpm}
@@ -342,7 +351,6 @@ export const EuclideanPresetsDemo: Story = () => {
             These presets represent traditional rhythms from world music.
           </div>
         </VStack>
-      )}
     </StoryContainer>
   );
 };
@@ -358,6 +366,18 @@ export const PatternBuilder: Story = () => {
   const [currentStep, setCurrentStep] = useState(0);
 
   const pattern = useMemo(() => patternFromString(notation), [notation]);
+
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
 
   useEffect(() => {
     if (!state.isReady) return;
@@ -414,15 +434,13 @@ export const PatternBuilder: Story = () => {
 
   return (
     <StoryContainer>
-      <StartButton onClick={start} isReady={state.isReady} />
-      {state.isReady && (
-        <VStack gap={32}>
-          <SectionTitle>Pattern Builder</SectionTitle>
+      <VStack gap={32}>
+        <SectionTitle>Pattern Builder</SectionTitle>
 
-          <Card>
-            <VStack gap={24}>
-              <HStack gap={24} align="flex-end">
-                <PlayButton isPlaying={isPlaying} onClick={() => setIsPlaying(!isPlaying)} />
+        <Card>
+          <VStack gap={24}>
+            <HStack gap={24} align="flex-end">
+              <PlayButton isPlaying={isPlaying} onClick={handlePlayToggle} />
                 <SmallKnob
                   value={bpm}
                   onChange={setBpm}
@@ -521,7 +539,6 @@ export const PatternBuilder: Story = () => {
             Click steps to toggle them on/off.
           </div>
         </VStack>
-      )}
     </StoryContainer>
   );
 };
@@ -726,6 +743,18 @@ export const StepSequencer: Story = () => {
     494, 494, 440, 440, 392, 392, 349, 0,
   ]);
 
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
+
   const notes = [
     { freq: 0, label: '-' },
     { freq: 261, label: 'C' },
@@ -795,15 +824,13 @@ export const StepSequencer: Story = () => {
 
   return (
     <StoryContainer>
-      <StartButton onClick={start} isReady={state.isReady} />
-      {state.isReady && (
-        <VStack gap={32}>
-          <SectionTitle>Step Sequencer</SectionTitle>
+      <VStack gap={32}>
+        <SectionTitle>Step Sequencer</SectionTitle>
 
-          <Card>
-            <VStack gap={24}>
-              <HStack gap={24} align="flex-end">
-                <PlayButton isPlaying={isPlaying} onClick={() => setIsPlaying(!isPlaying)} />
+        <Card>
+          <VStack gap={24}>
+            <HStack gap={24} align="flex-end">
+              <PlayButton isPlaying={isPlaying} onClick={handlePlayToggle} />
                 <SmallKnob
                   value={bpm}
                   onChange={setBpm}
@@ -862,7 +889,6 @@ export const StepSequencer: Story = () => {
             sequences.
           </div>
         </VStack>
-      )}
     </StoryContainer>
   );
 };
@@ -881,6 +907,18 @@ export const DrumMachine: Story = () => {
     hihat: [true, false, true, false, true, false, true, false, true, false, true, false, true, false, true, false],
     perc: [false, false, true, false, false, false, true, false, false, true, false, false, false, false, true, false],
   });
+
+  // Handle play toggle - initializes audio on first click
+  const handlePlayToggle = async () => {
+    if (isPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    if (!state.isReady) {
+      await start();
+    }
+    setIsPlaying(true);
+  };
 
   const tracks = [
     { key: 'kick' as const, label: 'Kick', freq: 60, color: colors.accent },
@@ -968,15 +1006,13 @@ export const DrumMachine: Story = () => {
 
   return (
     <StoryContainer>
-      <StartButton onClick={start} isReady={state.isReady} />
-      {state.isReady && (
-        <VStack gap={32}>
-          <SectionTitle>Drum Machine</SectionTitle>
+      <VStack gap={32}>
+        <SectionTitle>Drum Machine</SectionTitle>
 
-          <Card>
-            <VStack gap={24}>
-              <HStack gap={24} align="flex-end">
-                <PlayButton isPlaying={isPlaying} onClick={() => setIsPlaying(!isPlaying)} />
+        <Card>
+          <VStack gap={24}>
+            <HStack gap={24} align="flex-end">
+              <PlayButton isPlaying={isPlaying} onClick={handlePlayToggle} />
                 <SmallKnob
                   value={bpm}
                   onChange={setBpm}
@@ -1058,7 +1094,6 @@ export const DrumMachine: Story = () => {
             Click steps to toggle them on/off.
           </div>
         </VStack>
-      )}
     </StoryContainer>
   );
 };

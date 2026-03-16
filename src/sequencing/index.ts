@@ -42,6 +42,9 @@ export {
   type Pattern,
 } from './pattern';
 
+// Clip conversion
+export { clipToPatterns, type ClipNote } from './clipToPatterns';
+
 // Euclidean rhythms
 export {
   euclidean,

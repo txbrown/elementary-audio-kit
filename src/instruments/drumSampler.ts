@@ -8,6 +8,8 @@ export type DrumPadConfig = {
   vfsKey: string;
   /** MIDI note number for this pad */
   midiNumber: number;
+  /** Current gate value (0 = off, 1 = trigger). Update and re-render to fire. */
+  gate?: number;
 };
 
 /**
@@ -48,7 +50,7 @@ export function drumSampler(config: DrumSamplerConfig): {
     const gateKey = `${trackId}-${pad.midiNumber}-gate`;
     gateKeys[pad.midiNumber] = gateKey;
 
-    const gate = el.const({ key: gateKey, value: 0 });
+    const gate = el.const({ key: gateKey, value: pad.gate ?? 0 });
 
     return el.sample(
       { path: pad.vfsKey, mode: 'trigger', key: `${trackId}-${pad.midiNumber}-sample` },

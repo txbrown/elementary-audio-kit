@@ -52,7 +52,7 @@ export function melodicSampler(
 
   if (voices.length === 0) return el.const({ value: 0 });
 
-  const voiceSignals = voices.map((voice, i) => {
+  const voiceSignals = voices.map((voice) => {
     const rate = voice.note > 0 ? midiToRate(voice.note, baseMidiNumber) : 1;
 
     const gate = el.const({ key: `${trackId}:v${voice.key}:gate`, value: voice.gate });

@@ -45,3 +45,9 @@ export * from './timing';
 
 // Re-export all sequencing utilities
 export * from './sequencing';
+
+// Re-export all instrument factories
+export * from './instruments';
+
+// Re-export mixer utilities
+export * from './mixer';

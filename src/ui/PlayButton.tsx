@@ -1,4 +1,5 @@
 import { type CSSProperties } from 'react';
+import { Play, Square } from 'lucide-react';
 import { colors } from './tokens';
 
 export interface PlayButtonProps {
@@ -26,7 +27,7 @@ export function PlayButton({
         border: `2px solid ${isPlaying ? activeColor : colors.border}`,
         background: isPlaying ? activeColor : colors.surface,
         color: isPlaying ? '#fff' : colors.text,
-        fontSize: size * 0.4,
+        lineHeight: 0,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
@@ -36,7 +37,7 @@ export function PlayButton({
         ...style,
       }}
     >
-      {isPlaying ? '■' : '▶'}
+      {isPlaying ? <Square size={size * 0.35} fill="currentColor" /> : <Play size={size * 0.4} fill="currentColor" />}
     </button>
   );
 }

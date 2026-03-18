@@ -1,4 +1,5 @@
 import { type CSSProperties, useCallback, useMemo, useState } from 'react';
+import { Keyboard } from 'lucide-react';
 import { colors, fonts } from './tokens';
 import { useKeyboardMapping } from './hooks/useKeyboardMapping';
 import { useFlashState } from './hooks/useFlashState';
@@ -104,7 +105,7 @@ export function DrumPads({
           }}
           title="Toggle keyboard input (1234 / QWER / ASDF / ZXCV)"
         >
-          ⌨
+          <Keyboard size={16} />
         </button>
       </div>
 

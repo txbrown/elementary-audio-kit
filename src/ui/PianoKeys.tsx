@@ -1,4 +1,5 @@
 import React, { type CSSProperties, useCallback, useMemo, useState } from 'react';
+import { Keyboard } from 'lucide-react';
 import { colors, fonts } from './tokens';
 import { useKeyboardMapping } from './hooks/useKeyboardMapping';
 import { useFlashState } from './hooks/useFlashState';
@@ -288,7 +289,7 @@ export function PianoKeys({
           }}
           title="Toggle keyboard input (ASDF = notes, Z/X = octave)"
         >
-          ⌨
+          <Keyboard size={16} />
         </button>
       </div>
 

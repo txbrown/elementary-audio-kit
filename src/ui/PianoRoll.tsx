@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Bell, BellOff } from 'lucide-react';
 import { colors, fonts } from './tokens';
 import { useClockTimer } from './hooks/useClockTimer';
 import { PlayButton } from './PlayButton';
@@ -387,7 +388,7 @@ export function PianoRoll({
             onPointerDown={(e) => { e.preventDefault(); setMetronomeOn((v) => !v); }}
             title="Toggle metronome"
           >
-            {metronomeOn ? '🔔' : '🔕'}
+            {metronomeOn ? <Bell size={16} /> : <BellOff size={16} />}
           </button>
         )}
       </div>

@@ -1,4 +1,5 @@
 import { type CSSProperties } from 'react';
+import { Repeat } from 'lucide-react';
 import { colors, fonts } from './tokens';
 import { BeatLight } from './BeatLight';
 import { PlayButton } from './PlayButton';
@@ -65,7 +66,7 @@ export function Transport({
       </div>
 
       {loop && (
-        <span style={{ fontSize: 16, color: colors.textMuted }}>⟳</span>
+        <Repeat size={16} style={{ color: colors.textMuted }} />
       )}
     </div>
   );

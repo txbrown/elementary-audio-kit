@@ -1,4 +1,4 @@
-import {
+import React, {
   type CSSProperties,
   useCallback,
   useMemo,
@@ -57,6 +57,8 @@ export interface PianoRollProps {
   cellWidth?: number;
   /** Pixels per row (default: 28) */
   cellHeight?: number;
+  /** Ref that receives a stop() function for imperative external control */
+  stopRef?: React.MutableRefObject<(() => void) | null>;
   style?: CSSProperties;
 }
 
@@ -91,6 +93,7 @@ export function PianoRoll({
   onMetronomeTick,
   cellWidth: CELL_W = 28,
   cellHeight: CELL_H = 28,
+  stopRef,
   style,
 }: PianoRollProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -154,17 +157,24 @@ export function PianoRoll({
     { tempo, totalSteps: totalColumns, subdivision: 4, onStep },
   );
 
+  const handleStop = useCallback(() => {
+    clock.stop();
+    setIsPlaying(false);
+    onPlaybackStop?.();
+  }, [clock, onPlaybackStop]);
+
+  // Expose stop function for imperative external control (e.g. exclusive playback)
+  if (stopRef) stopRef.current = handleStop;
+
   const handleToggle = useCallback(() => {
     if (clock.isRunning) {
-      clock.stop();
-      setIsPlaying(false);
-      onPlaybackStop?.();
+      handleStop();
     } else {
       onPlaybackStart?.();
       clock.start();
       setIsPlaying(true);
     }
-  }, [clock, onPlaybackStart, onPlaybackStop]);
+  }, [clock, handleStop, onPlaybackStart]);
 
   // ------------------------------------------------------------------
   // Grid click: create note

@@ -5,17 +5,16 @@ import { useKeyboardMapping } from './hooks/useKeyboardMapping';
 import { useFlashState } from './hooks/useFlashState';
 
 const DEFAULT_LABELS = [
-  'Kick', 'Snare', 'Clap', 'Rim',
-  'CH', 'OH', 'Perc 1', 'Perc 2',
-  'Tom 1', 'Tom 2', 'Tom 3', 'Tom 4',
   'FX 1', 'FX 2', 'FX 3', 'FX 4',
+  'Tom 1', 'Tom 2', 'Tom 3', 'Tom 4',
+  'Kick', 'Snare', 'Clap', 'Rim',
 ];
 
 const KEYBOARD_MAP: Record<string, number> = {
-  '1': 0, '2': 1, '3': 2, '4': 3,
-  q: 4, w: 5, e: 6, r: 7,
-  a: 8, s: 9, d: 10, f: 11,
-  z: 12, x: 13, c: 14, v: 15,
+  '1': 0, '2': 1, '3': 2, '4': 3,    // FX 1-4
+  q: 4, w: 5, e: 6, r: 7,            // Tom 1-4
+  a: 8, s: 9, d: 10, f: 11,          // CH, OH, Perc 1-2
+  z: 12, x: 13, c: 14, v: 15,        // Kick, Snare, Clap, Rim
 };
 
 const REVERSE_MAP: Map<number, string> = new Map(

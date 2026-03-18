@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useMountEffect } from './useMountEffect';
 
 export interface UseKeyboardMappingOptions {
   /** Lowercase key → value mapping (e.g. { 'a': 0, 's': 1 }) */
@@ -15,32 +16,22 @@ export interface UseKeyboardMappingOptions {
 
 /**
  * Maps computer keyboard keys to actions with repeat prevention and held-key tracking.
- * Used by DrumPads (1234/QWER/ASDF/ZXCV) and PianoKeys (ASDFGHJKL + WETYUOP).
+ * Listeners are added on mount and removed on unmount. The `enabled` flag is checked
+ * via ref inside the handler — no effect needed for enable/disable toggling.
  */
-export function useKeyboardMapping({
-  mapping,
-  onKeyDown,
-  onKeyUp,
-  enabled,
-  extraKeys,
-}: UseKeyboardMappingOptions): void {
+export function useKeyboardMapping(options: UseKeyboardMappingOptions): void {
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
   const heldKeysRef = useRef<Set<string>>(new Set());
-  const onKeyDownRef = useRef(onKeyDown);
-  const onKeyUpRef = useRef(onKeyUp);
-  const extraKeysRef = useRef(extraKeys);
 
-  onKeyDownRef.current = onKeyDown;
-  onKeyUpRef.current = onKeyUp;
-  extraKeysRef.current = extraKeys;
-
-  useEffect(() => {
-    if (!enabled) return;
-
+  useMountEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const { enabled, mapping, onKeyDown, extraKeys } = optionsRef.current;
+      if (!enabled) return;
+
       const key = e.key.toLowerCase();
 
-      // Check extra keys first (e.g. octave shift)
-      const extra = extraKeysRef.current?.[key];
+      const extra = extraKeys?.[key];
       if (extra) {
         e.preventDefault();
         e.stopPropagation();
@@ -54,18 +45,19 @@ export function useKeyboardMapping({
       e.preventDefault();
       e.stopPropagation();
 
-      if (heldKeysRef.current.has(key)) return; // prevent key repeat
+      if (heldKeysRef.current.has(key)) return;
       heldKeysRef.current.add(key);
-      onKeyDownRef.current(value);
+      onKeyDown(value);
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      const { mapping, onKeyUp } = optionsRef.current;
       const key = e.key.toLowerCase();
       heldKeysRef.current.delete(key);
 
       const value = mapping[key];
       if (value === undefined) return;
-      onKeyUpRef.current?.(value);
+      onKeyUp?.(value);
     };
 
     document.addEventListener('keydown', handleKeyDown);
@@ -76,5 +68,5 @@ export function useKeyboardMapping({
       document.removeEventListener('keyup', handleKeyUp);
       heldKeysRef.current.clear();
     };
-  }, [enabled, mapping]);
+  });
 }

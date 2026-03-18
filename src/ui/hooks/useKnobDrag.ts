@@ -1,4 +1,5 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useMountEffect } from './useMountEffect';
 
 export interface KnobDragOptions {
   /** Current value */
@@ -52,18 +53,16 @@ export function useKnobDrag(options: KnobDragOptions): KnobDragResult {
 
   const [isDragging, setIsDragging] = useState(false);
 
-  // Use refs for values needed in event handlers to avoid stale closures
+  // Refs for values needed in event handlers — synced at render time (no effect)
   const isDraggingRef = useRef(false);
   const startYRef = useRef(0);
   const startValueRef = useRef(0);
   const onChangeRef = useRef(onChange);
   const optionsRef = useRef({ min, max, step, sensitivity, curve });
 
-  // Keep refs in sync
-  useEffect(() => {
-    onChangeRef.current = onChange;
-    optionsRef.current = { min, max, step, sensitivity, curve };
-  });
+  // Sync refs at render time — no useEffect needed
+  onChangeRef.current = onChange;
+  optionsRef.current = { min, max, step, sensitivity, curve };
 
   const handlePointerMove = useCallback((e: PointerEvent) => {
     if (!isDraggingRef.current) return;
@@ -74,15 +73,12 @@ export function useKnobDrag(options: KnobDragOptions): KnobDragResult {
 
     let newNormalized = Math.max(0, Math.min(1, startValueRef.current + deltaNormalized));
 
-    // Apply curve
     if (curve === 'logarithmic') {
       newNormalized = Math.pow(newNormalized, 2);
     }
 
-    // Denormalize
     let newValue = newNormalized * (max - min) + min;
 
-    // Snap to step
     if (step > 0) {
       newValue = Math.round((newValue - min) / step) * step + min;
       newValue = Math.max(min, Math.min(max, newValue));
@@ -106,10 +102,7 @@ export function useKnobDrag(options: KnobDragOptions): KnobDragResult {
 
       const { min, max, curve } = optionsRef.current;
 
-      // Normalize current value
       let normalizedValue = (value - min) / (max - min);
-
-      // Apply inverse curve for starting position
       if (curve === 'logarithmic') {
         normalizedValue = Math.sqrt(Math.max(0, normalizedValue));
       }
@@ -166,7 +159,6 @@ export function useKnobDrag(options: KnobDragOptions): KnobDragResult {
           return;
       }
 
-      // Snap to step
       if (step > 0) {
         newValue = Math.round((newValue - min) / step) * step + min;
         newValue = Math.max(min, Math.min(max, newValue));
@@ -177,13 +169,13 @@ export function useKnobDrag(options: KnobDragOptions): KnobDragResult {
     [disabled, value, onChange, min, max, step]
   );
 
-  // Cleanup on unmount
-  useEffect(() => {
+  // Cleanup on unmount only
+  useMountEffect(() => {
     return () => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
-  }, [handlePointerMove, handlePointerUp]);
+  });
 
   return {
     knobProps: {

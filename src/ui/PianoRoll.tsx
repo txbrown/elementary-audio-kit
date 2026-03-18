@@ -1,7 +1,6 @@
 import {
   type CSSProperties,
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -151,20 +150,21 @@ export function PianoRoll({
     }
   }, []);
 
-  const { currentStep, playheadPosition } = useClockTimer(
+  const clock = useClockTimer(
     { tempo, totalSteps: totalColumns, subdivision: 4, onStep },
-    isPlaying
   );
 
   const handleToggle = useCallback(() => {
-    if (isPlaying) {
+    if (clock.isRunning) {
+      clock.stop();
       setIsPlaying(false);
       onPlaybackStop?.();
     } else {
-      setIsPlaying(true);
       onPlaybackStart?.();
+      clock.start();
+      setIsPlaying(true);
     }
-  }, [isPlaying, onPlaybackStart, onPlaybackStop]);
+  }, [clock, onPlaybackStart, onPlaybackStop]);
 
   // ------------------------------------------------------------------
   // Grid click: create note
@@ -292,11 +292,6 @@ export function PianoRoll({
     },
     [dragState, notes, totalBeats, noteToRow, rows, onNotesChange, handleNoteClick]
   );
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => setIsPlaying(false);
-  }, []);
 
   // ------------------------------------------------------------------
   // Render
@@ -455,11 +450,11 @@ export function PianoRoll({
             ))}
 
             {/* Playhead */}
-            {isPlaying && playheadPosition >= 0 && (
+            {isPlaying && clock.playheadPosition >= 0 && (
               <div
                 style={{
                   position: 'absolute',
-                  left: playheadPosition * CELL_W,
+                  left: clock.playheadPosition * CELL_W,
                   top: 0,
                   width: 2,
                   height: gridH,
@@ -476,7 +471,7 @@ export function PianoRoll({
               const noteStartCol = Math.round(note.position * 4);
               const noteEndCol = Math.round((note.position + note.duration) * 4);
               const isNoteActive =
-                isPlaying && currentStep >= noteStartCol && currentStep < noteEndCol;
+                isPlaying && clock.currentStep >= noteStartCol && clock.currentStep < noteEndCol;
 
               return (
                 <div

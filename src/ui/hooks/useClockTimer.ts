@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useMountEffect } from './useMountEffect';
 
 export interface UseClockTimerOptions {
   /** Tempo in BPM */
@@ -14,27 +15,26 @@ export interface UseClockTimerOptions {
 /**
  * Clock-corrected playback timer with smooth visual playhead.
  *
- * Uses setTimeout with drift compensation for accurate audio-step triggering,
- * and requestAnimationFrame for smooth sub-step playhead animation.
+ * Imperative API: call start() / stop() from event handlers.
+ * No useEffect — mount effect only for cleanup.
  */
-export function useClockTimer(
-  options: UseClockTimerOptions,
-  isPlaying: boolean
-): {
+export function useClockTimer(options: UseClockTimerOptions): {
   currentStep: number;
   playheadPosition: number;
+  start: () => void;
+  stop: () => void;
+  isRunning: boolean;
 } {
-  const { tempo, totalSteps, subdivision = 4, onStep } = options;
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const [currentStep, setCurrentStep] = useState(-1);
   const [playheadPosition, setPlayheadPosition] = useState(-1);
+  const [isRunning, setIsRunning] = useState(false);
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rafRef = useRef<number | null>(null);
-  const clockStartRef = useRef(0);
   const currentStepRef = useRef(-1);
-  const onStepRef = useRef(onStep);
-  onStepRef.current = onStep;
 
   const cleanup = useCallback(() => {
     if (timeoutRef.current) {
@@ -47,69 +47,58 @@ export function useClockTimer(
     }
   }, []);
 
-  const startClock = useCallback(
-    (fromStep = 0) => {
-      cleanup();
+  const stop = useCallback(() => {
+    cleanup();
+    setCurrentStep(-1);
+    setPlayheadPosition(-1);
+    currentStepRef.current = -1;
+    setIsRunning(false);
+  }, [cleanup]);
 
-      const intervalMs = (60 / tempo / subdivision) * 1000;
-      const startTime = performance.now();
-      let tickCount = 0;
-      let lastTriggeredStep = fromStep;
+  const start = useCallback(() => {
+    cleanup();
 
-      clockStartRef.current = startTime;
-      currentStepRef.current = fromStep;
-      setCurrentStep(fromStep);
-      onStepRef.current?.(fromStep);
+    const { tempo, subdivision = 4, onStep } = optionsRef.current;
+    const intervalMs = (60 / tempo / subdivision) * 1000;
+    const startTime = performance.now();
+    let tickCount = 0;
+    let lastTriggeredStep = 0;
 
-      // Audio: clock-corrected setTimeout
-      function audioTick() {
-        tickCount++;
-        const step = (fromStep + tickCount) % totalSteps;
-        currentStepRef.current = step;
-        lastTriggeredStep = step;
-        onStepRef.current?.(step);
+    currentStepRef.current = 0;
+    setCurrentStep(0);
+    setIsRunning(true);
+    onStep?.(0);
 
-        const expected = startTime + tickCount * intervalMs;
-        const drift = performance.now() - expected;
-        const nextDelay = Math.max(0, intervalMs - drift);
-        timeoutRef.current = setTimeout(audioTick, nextDelay);
-      }
-      timeoutRef.current = setTimeout(audioTick, intervalMs);
+    // Audio: clock-corrected setTimeout
+    function audioTick() {
+      tickCount++;
+      const { totalSteps: ts, onStep: stepCb } = optionsRef.current;
+      const step = tickCount % ts;
+      currentStepRef.current = step;
+      lastTriggeredStep = step;
+      stepCb?.(step);
 
-      // Visual: rAF for smooth playhead
-      function animate() {
-        const elapsed = performance.now() - clockStartRef.current;
-        const fracStep = (fromStep + elapsed / intervalMs) % totalSteps;
-        setPlayheadPosition(fracStep);
-        setCurrentStep(lastTriggeredStep);
-        rafRef.current = requestAnimationFrame(animate);
-      }
+      const expected = startTime + tickCount * intervalMs;
+      const drift = performance.now() - expected;
+      const nextDelay = Math.max(0, intervalMs - drift);
+      timeoutRef.current = setTimeout(audioTick, nextDelay);
+    }
+    timeoutRef.current = setTimeout(audioTick, intervalMs);
+
+    // Visual: rAF for smooth playhead
+    function animate() {
+      const elapsed = performance.now() - startTime;
+      const { totalSteps: ts } = optionsRef.current;
+      const fracStep = (elapsed / intervalMs) % ts;
+      setPlayheadPosition(fracStep);
+      setCurrentStep(lastTriggeredStep);
       rafRef.current = requestAnimationFrame(animate);
-    },
-    [tempo, totalSteps, subdivision, cleanup]
-  );
-
-  // Start/stop based on isPlaying
-  useEffect(() => {
-    if (isPlaying) {
-      startClock(0);
-    } else {
-      cleanup();
-      setCurrentStep(-1);
-      setPlayheadPosition(-1);
-      currentStepRef.current = -1;
     }
-    return cleanup;
-  }, [isPlaying, startClock, cleanup]);
+    rafRef.current = requestAnimationFrame(animate);
+  }, [cleanup]);
 
-  // Handle tempo changes while playing
-  useEffect(() => {
-    if (!isPlaying) return;
-    const resumeStep = currentStepRef.current;
-    if (resumeStep >= 0) {
-      startClock(resumeStep);
-    }
-  }, [tempo]);
+  // Cleanup on unmount only
+  useMountEffect(() => cleanup);
 
-  return { currentStep, playheadPosition };
+  return { currentStep, playheadPosition, start, stop, isRunning };
 }

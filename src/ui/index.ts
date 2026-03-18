@@ -37,3 +37,4 @@ export { useKnobDrag, type KnobDragOptions, type KnobDragResult } from './hooks/
 export { useKeyboardMapping, type UseKeyboardMappingOptions } from './hooks/useKeyboardMapping';
 export { useFlashState } from './hooks/useFlashState';
 export { useClockTimer, type UseClockTimerOptions } from './hooks/useClockTimer';
+export { useMountEffect } from './hooks/useMountEffect';

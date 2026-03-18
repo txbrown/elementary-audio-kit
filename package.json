@@ -1,6 +1,6 @@
 {
   "name": "elementary-audio-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Musical abstractions for Elementary Audio - timing, sequencing, and instruments",
   "author": "Ricardo Abreu",
   "license": "MIT",

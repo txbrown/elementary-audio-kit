@@ -29,6 +29,7 @@ export { StartButton, type StartButtonProps } from './StartButton';
 // Instruments
 export { DrumPads, type DrumPadsProps } from './DrumPads';
 export { PianoKeys, type PianoKeysProps } from './PianoKeys';
+export { PatternPlayer, type PatternPlayerProps, type PatternPlayerRow } from './PatternPlayer';
 export { PianoRoll, type PianoRollProps, type NoteData, type RowConfig } from './PianoRoll';
 export { Transport, type TransportProps } from './Transport';
 

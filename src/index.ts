@@ -51,3 +51,6 @@ export * from './instruments';
 
 // Re-export mixer utilities
 export * from './mixer';
+
+// Re-export parser utilities
+export * from './parser';

@@ -141,9 +141,36 @@ import { ... } from '@elementary-audio-kit/core/sequencing';
 - [ ] **MIDI**: Note scheduling, CC mapping
 - [ ] **React hooks**: useTransport, useSequencer (separate package)
 
+## Releasing
+
+Start from a clean `main` branch, then validate the package:
+
+```bash
+npm test -- --run
+npm run build
+```
+
+Review the Conventional Commit history since the last release to choose the semver bump, then use npm's built-in version command to update `package.json` and `package-lock.json`, create the release commit, and tag it:
+
+```bash
+npm version patch   # fix: changes
+npm version minor   # feat: changes
+npm version major   # breaking changes marked with ! or BREAKING CHANGE
+```
+
+Check the package that will be published, then push the commit and tag:
+
+```bash
+npm publish --dry-run
+git push origin main --follow-tags
+npm publish
+```
+
 ## Contributing
 
 Contributions are welcome! This project aims to make Elementary Audio more accessible by providing musical building blocks that are missing from the core library.
+
+Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a PR. Commit messages and PR titles should follow Conventional Commits so releases and release notes stay easy to manage.
 
 ## License
 

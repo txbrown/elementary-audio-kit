@@ -12,19 +12,22 @@ export interface UseKeyboardMappingOptions {
   enabled: boolean;
   /** Extra key handlers (e.g. { 'z': () => shiftDown(), 'x': () => shiftUp() }) */
   extraKeys?: Record<string, () => void>;
+  /** Attach listeners in the capture phase so mapped events can be consumed first */
+  capture?: boolean;
 }
 
 /**
  * Maps computer keyboard keys to actions with repeat prevention and held-key tracking.
- * Listeners are added on mount and removed on unmount. The `enabled` flag is checked
- * via ref inside the handler — no effect needed for enable/disable toggling.
  */
 export function useKeyboardMapping(options: UseKeyboardMappingOptions): void {
   const optionsRef = useRef(options);
   optionsRef.current = options;
   const heldKeysRef = useRef<Set<string>>(new Set());
+  const captureAtMount = useRef(options.capture ?? false);
 
   useMountEffect(() => {
+    const useCapture = captureAtMount.current;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       const { enabled, mapping, onKeyDown, extraKeys } = optionsRef.current;
       if (!enabled) return;
@@ -51,21 +54,23 @@ export function useKeyboardMapping(options: UseKeyboardMappingOptions): void {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      const { mapping, onKeyUp } = optionsRef.current;
+      const { enabled, mapping, onKeyUp } = optionsRef.current;
       const key = e.key.toLowerCase();
-      heldKeysRef.current.delete(key);
-
+      const wasHeld = heldKeysRef.current.delete(key);
       const value = mapping[key];
-      if (value === undefined) return;
+      if (value === undefined || (!enabled && !wasHeld)) return;
+
+      e.preventDefault();
+      e.stopPropagation();
       onKeyUp?.(value);
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('keydown', handleKeyDown, { capture: useCapture });
+    document.addEventListener('keyup', handleKeyUp, { capture: useCapture });
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('keydown', handleKeyDown, { capture: useCapture });
+      document.removeEventListener('keyup', handleKeyUp, { capture: useCapture });
       heldKeysRef.current.clear();
     };
   });

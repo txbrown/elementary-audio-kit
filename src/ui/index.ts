@@ -23,6 +23,7 @@ export { StepGrid, type StepGridProps } from './StepGrid';
 
 // Controls
 export { Knob, type KnobProps, type KnobRenderState } from './Knob';
+export { AudioKnob, type AudioKnobProps } from './AudioKnob';
 export { PlayButton, type PlayButtonProps } from './PlayButton';
 export { StartButton, type StartButtonProps } from './StartButton';
 

@@ -1,4 +1,4 @@
-import React, { type CSSProperties, useCallback, useMemo, useState } from 'react';
+import React, { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard } from 'lucide-react';
 import { colors, fonts } from './tokens';
 import { useKeyboardMapping } from './hooks/useKeyboardMapping';
@@ -80,6 +80,8 @@ export function PianoKeys({
   style,
 }: PianoKeysProps) {
   const [keyboardEnabled, setKeyboardEnabled] = useState(defaultKeyboardEnabled);
+  const keyboardEnabledRef = useRef(keyboardEnabled);
+  keyboardEnabledRef.current = keyboardEnabled;
   const [keyboardOctave, setKeyboardOctave] = useState(defaultKeyboardOctave);
   const { activeSet, flash } = useFlashState(holdDuration);
 
@@ -93,7 +95,6 @@ export function PianoKeys({
     [onNoteOn, flash]
   );
 
-  // Build keyboard mapping from offset → MIDI note
   const kbMapping = useMemo(() => {
     const map: Record<string, number> = {};
     for (const [key, offset] of Object.entries(KEYBOARD_MAP)) {
@@ -116,9 +117,27 @@ export function PianoKeys({
     onKeyUp: onNoteOff,
     enabled: keyboardEnabled,
     extraKeys,
+    capture: true,
   });
 
-  // Build key elements
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (!keyboardEnabledRef.current) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setKeyboardEnabled(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape, { capture: true });
+    return () => document.removeEventListener('keydown', handleEscape, { capture: true });
+  }, []);
+
+  const armKeyboard = useCallback(() => {
+    if (!keyboardEnabled) setKeyboardEnabled(true);
+  }, [keyboardEnabled]);
+
   const whiteKeyEls: React.ReactElement[] = [];
   const blackKeyEls: React.ReactElement[] = [];
 
@@ -128,7 +147,6 @@ export function PianoKeys({
       const isActive = activeSet.has(midiNote);
       const isHighlighted = highlightedNotes?.includes(midiNote);
 
-      // Keyboard shortcut label
       const offset = midiNote - (keyboardOctave * 12 + 12);
       const kbLabel =
         keyboardEnabled && offset >= 0 && offset <= 17
@@ -163,6 +181,7 @@ export function PianoKeys({
             }}
             onPointerDown={(e) => {
               e.preventDefault();
+              armKeyboard();
               handleNoteOn(midiNote);
             }}
             onPointerUp={() => onNoteOff(midiNote)}
@@ -207,6 +226,7 @@ export function PianoKeys({
             }}
             onPointerDown={(e) => {
               e.preventDefault();
+              armKeyboard();
               handleNoteOn(midiNote);
             }}
             onPointerUp={() => onNoteOff(midiNote)}
@@ -229,8 +249,17 @@ export function PianoKeys({
         ...style,
       }}
     >
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
+        {keyboardEnabled && (
+          <span style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted }}>
+            Esc to release
+          </span>
+        )}
+        {!keyboardEnabled && (
+          <span style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted }}>
+            click key or ⌨ to arm
+          </span>
+        )}
         {keyboardEnabled && (
           <span style={{ fontFamily: fonts.mono, fontSize: 11, color: colors.textMuted }}>
             C{keyboardOctave}
@@ -287,13 +316,12 @@ export function PianoKeys({
             e.preventDefault();
             setKeyboardEnabled((prev) => !prev);
           }}
-          title="Toggle keyboard input (ASDF = notes, Z/X = octave)"
+          title="Toggle keyboard input (ASDF = notes, Z/X = octave, Esc = release)"
         >
           <Keyboard size={16} />
         </button>
       </div>
 
-      {/* Keyboard */}
       <div style={{ position: 'relative', display: 'flex' }}>
         {whiteKeyEls}
         {blackKeyEls}
